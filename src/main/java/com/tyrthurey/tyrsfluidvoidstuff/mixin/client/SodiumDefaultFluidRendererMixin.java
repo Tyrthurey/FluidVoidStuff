@@ -174,6 +174,37 @@ public abstract class SodiumDefaultFluidRendererMixin {
                 this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
             }
         }
+
+        // Bottom cap: render a downward-facing quad with the still texture at the
+        // bottom of the actual fluid block so viewers looking up from beneath the
+        // void column see the fluid surface instead of an empty hollow column.
+        TextureAtlasSprite still = sprites[0];
+        quad.setSprite(still);
+        float bu1 = still.getU(0.0F);
+        float bu2 = still.getU(1.0F);
+        float bv1 = still.getV(0.0F);
+        float bv2 = still.getV(1.0F);
+        // Quad lying on the bottom face (y = EPSILON inside the local 1x1x1 cell),
+        // wound so the visible (front) face points DOWN (-Y): viewer below sees it,
+        // viewer above (inside the column) does not.
+        setVertex(quad, 0, 0.0F, EPSILON, 0.0F,        bu1, bv1);
+        setVertex(quad, 1, 0.0F, EPSILON, 1.0F,        bu1, bv2);
+        setVertex(quad, 2, 1.0F, EPSILON, 1.0F,        bu2, bv2);
+        setVertex(quad, 3, 1.0F, EPSILON, 0.0F,        bu2, bv1);
+
+        ModelQuadFacing downFacing = ModelQuadFacing.fromDirection(Direction.DOWN);
+        LightPipeline downLighter = this.lighters.getLighter(isWater && Minecraft.useAmbientOcclusion() ? LightMode.SMOOTH : LightMode.FLAT);
+        downLighter.calculate(quad, blockPos, this.quadLightData, null, Direction.DOWN, false, false);
+        colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors);
+
+        int[] capColors = new int[]{
+                ColorARGB.toABGR(this.quadColors[0]),
+                ColorARGB.toABGR(this.quadColors[1]),
+                ColorARGB.toABGR(this.quadColors[2]),
+                ColorARGB.toABGR(this.quadColors[3])
+        };
+        this.fluidVoidFading$updateQuadWithAlpha(quad, downFacing, 0.5F, capColors, 1.0F, 1.0F);
+        this.writeQuad(meshBuilder, collector, material, offset, quad, downFacing, false);
     }
 
     @Unique

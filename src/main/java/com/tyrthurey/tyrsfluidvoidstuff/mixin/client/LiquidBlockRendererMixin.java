@@ -105,6 +105,10 @@ public abstract class LiquidBlockRendererMixin {
                 .getModelManager()
                 .getAtlas(InventoryMenu.BLOCK_ATLAS)
                 .getSprite(ext.getFlowingTexture(fluidState, level, pos));
+        TextureAtlasSprite stillSprite = Minecraft.getInstance()
+                .getModelManager()
+                .getAtlas(InventoryMenu.BLOCK_ATLAS)
+                .getSprite(ext.getStillTexture(fluidState, level, pos));
         int color = ext.getTintColor(fluidState, level, pos);
         int[] colors = fluidVoidFading$unpackColor(color);
 
@@ -192,6 +196,28 @@ public abstract class LiquidBlockRendererMixin {
                 fluidVoidFading$vertex(consumer, x1, e + ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
             }
         }
+
+        // Bottom cap: a downward-facing quad at the bottom of the actual fluid block
+        // (y == e) so that a viewer looking up from below the void column sees the
+        // fluid's still surface texture instead of an empty hollow column.
+        float bu1 = stillSprite.getU(0.0F);
+        float bu2 = stillSprite.getU(1.0F);
+        float bv1 = stillSprite.getV(0.0F);
+        float bv2 = stillSprite.getV(1.0F);
+        float bRed = brightnessUp * redF;
+        float bGreen = brightnessUp * greenF;
+        float bBlue = brightnessUp * blueF;
+        // Wound so the visible (front) face points DOWN (-Y): viewer below sees it,
+        // viewer above (inside the column) does not.
+        fluidVoidFading$vertexDown(consumer, d,        e, r,        bRed, bGreen, bBlue, bu1, bv1, light, alpha1);
+        fluidVoidFading$vertexDown(consumer, d + 1.0F, e, r,        bRed, bGreen, bBlue, bu2, bv1, light, alpha1);
+        fluidVoidFading$vertexDown(consumer, d + 1.0F, e, r + 1.0F, bRed, bGreen, bBlue, bu2, bv2, light, alpha1);
+        fluidVoidFading$vertexDown(consumer, d,        e, r + 1.0F, bRed, bGreen, bBlue, bu1, bv2, light, alpha1);
+    }
+
+    @Unique
+    private void fluidVoidFading$vertexDown(VertexConsumer consumer, float x, float y, float z, float red, float green, float blue, float u, float v, int light, float alpha) {
+        consumer.addVertex(x, y, z).setColor(red, green, blue, alpha).setUv(u, v).setLight(light).setNormal(0.0F, -1.0F, 0.0F);
     }
 
     @Unique
