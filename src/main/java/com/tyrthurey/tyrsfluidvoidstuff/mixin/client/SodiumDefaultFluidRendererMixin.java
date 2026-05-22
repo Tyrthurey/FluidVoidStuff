@@ -160,19 +160,20 @@ public abstract class SodiumDefaultFluidRendererMixin {
                     ColorARGB.toABGR(this.quadColors[3])
             };
 
+            // Always emit the reverse-winding (back-facing) quads so the gradient
+            // sides remain visible and identically shaded when the camera moves
+            // below the fluid column, regardless of whether this is an overlay
+            // sprite. Without this, when looking up from below the front quad is
+            // back-face-culled, leaving the gradient looking far more transparent.
             BlockPos downPos1 = offset.below(1);
             this.fluidVoidFading$updateQuadWithAlpha(quad, facing, br, original, 1.0F, 0.3F);
             this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing, false);
-            if (!isOverlay) {
-                this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
-            }
+            this.writeQuad(meshBuilder, collector, material, downPos1, quad, facing.getOpposite(), true);
 
             BlockPos downPos2 = offset.below(2);
             this.fluidVoidFading$updateQuadWithAlpha(quad, facing, br, original, 0.3F, 0.0F);
             this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing, false);
-            if (!isOverlay) {
-                this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
-            }
+            this.writeQuad(meshBuilder, collector, material, downPos2, quad, facing.getOpposite(), true);
         }
 
         // Bottom cap: render a downward-facing quad with the still texture at the

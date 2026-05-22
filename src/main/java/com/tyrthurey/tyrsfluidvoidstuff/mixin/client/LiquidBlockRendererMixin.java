@@ -174,27 +174,40 @@ public abstract class LiquidBlockRendererMixin {
             float green = brightnessUp * sidedBrightness * greenF;
             float blue = brightnessUp * sidedBrightness * blueF;
 
-            fluidVoidFading$vertex(consumer, x1, e + ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
-            fluidVoidFading$vertex(consumer, x2, e + cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
-            fluidVoidFading$vertex(consumer, x2, e + t - 1, z2, red, green, blue, u2, v3, light, alpha2);
-            fluidVoidFading$vertex(consumer, x1, e + t - 1, z1, red, green, blue, u1, v3, light, alpha2);
+            // Normal pointing outward from the block, per face direction. Using the
+            // correct horizontal normal (instead of +Y) ensures the chunk shader's
+            // directional/diffuse lighting treats these as vertical side faces, so
+            // they shade identically when viewed from above and from below.
+            float nx = direction.getStepX();
+            float ny = 0.0F;
+            float nz = direction.getStepZ();
 
-            fluidVoidFading$vertex(consumer, x1, e + ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
-            fluidVoidFading$vertex(consumer, x2, e + cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
-            fluidVoidFading$vertex(consumer, x2, e + t - 2, z2, red, green, blue, u2, v3, light, alpha3);
-            fluidVoidFading$vertex(consumer, x1, e + t - 2, z1, red, green, blue, u1, v3, light, alpha3);
+            fluidVoidFading$vertex(consumer, x1, e + ca - 1, z1, red, green, blue, u1, v1, light, alpha1, nx, ny, nz);
+            fluidVoidFading$vertex(consumer, x2, e + cb - 1, z2, red, green, blue, u2, v2, light, alpha1, nx, ny, nz);
+            fluidVoidFading$vertex(consumer, x2, e + t - 1, z2, red, green, blue, u2, v3, light, alpha2, nx, ny, nz);
+            fluidVoidFading$vertex(consumer, x1, e + t - 1, z1, red, green, blue, u1, v3, light, alpha2, nx, ny, nz);
 
-            if (sprite != this.waterOverlay) {
-                fluidVoidFading$vertex(consumer, x1, e + t - 1, z1, red, green, blue, u1, v3, light, alpha2);
-                fluidVoidFading$vertex(consumer, x2, e + t - 1, z2, red, green, blue, u2, v3, light, alpha2);
-                fluidVoidFading$vertex(consumer, x2, e + cb - 1, z2, red, green, blue, u2, v2, light, alpha1);
-                fluidVoidFading$vertex(consumer, x1, e + ca - 1, z1, red, green, blue, u1, v1, light, alpha1);
+            fluidVoidFading$vertex(consumer, x1, e + ca - 2, z1, red, green, blue, u1, v1, light, alpha2, nx, ny, nz);
+            fluidVoidFading$vertex(consumer, x2, e + cb - 2, z2, red, green, blue, u2, v2, light, alpha2, nx, ny, nz);
+            fluidVoidFading$vertex(consumer, x2, e + t - 2, z2, red, green, blue, u2, v3, light, alpha3, nx, ny, nz);
+            fluidVoidFading$vertex(consumer, x1, e + t - 2, z1, red, green, blue, u1, v3, light, alpha3, nx, ny, nz);
 
-                fluidVoidFading$vertex(consumer, x1, e + t - 2, z1, red, green, blue, u1, v3, light, alpha3);
-                fluidVoidFading$vertex(consumer, x2, e + t - 2, z2, red, green, blue, u2, v3, light, alpha3);
-                fluidVoidFading$vertex(consumer, x2, e + cb - 2, z2, red, green, blue, u2, v2, light, alpha2);
-                fluidVoidFading$vertex(consumer, x1, e + ca - 2, z1, red, green, blue, u1, v1, light, alpha2);
-            }
+            // Always emit the reverse-winding (back-facing) quads so the gradient
+            // remains visible and identically shaded when viewed from below the
+            // fluid column, even when the front face would be back-face culled.
+            // (Previously this was gated behind `sprite != waterOverlay`, leaving
+            // the gradient effectively invisible / much more transparent from
+            // below in the overlay case, and the back side relied on a +Y normal
+            // that disagreed with the front face's lighting.)
+            fluidVoidFading$vertex(consumer, x1, e + t - 1, z1, red, green, blue, u1, v3, light, alpha2, -nx, ny, -nz);
+            fluidVoidFading$vertex(consumer, x2, e + t - 1, z2, red, green, blue, u2, v3, light, alpha2, -nx, ny, -nz);
+            fluidVoidFading$vertex(consumer, x2, e + cb - 1, z2, red, green, blue, u2, v2, light, alpha1, -nx, ny, -nz);
+            fluidVoidFading$vertex(consumer, x1, e + ca - 1, z1, red, green, blue, u1, v1, light, alpha1, -nx, ny, -nz);
+
+            fluidVoidFading$vertex(consumer, x1, e + t - 2, z1, red, green, blue, u1, v3, light, alpha3, -nx, ny, -nz);
+            fluidVoidFading$vertex(consumer, x2, e + t - 2, z2, red, green, blue, u2, v3, light, alpha3, -nx, ny, -nz);
+            fluidVoidFading$vertex(consumer, x2, e + cb - 2, z2, red, green, blue, u2, v2, light, alpha2, -nx, ny, -nz);
+            fluidVoidFading$vertex(consumer, x1, e + ca - 2, z1, red, green, blue, u1, v1, light, alpha2, -nx, ny, -nz);
         }
 
         // Bottom cap: a downward-facing quad at the bottom of the actual fluid block
@@ -231,7 +244,7 @@ public abstract class LiquidBlockRendererMixin {
     }
 
     @Unique
-    private void fluidVoidFading$vertex(VertexConsumer consumer, float x, float y, float z, float red, float green, float blue, float u, float v, int light, float alpha) {
-        consumer.addVertex(x, y, z).setColor(red, green, blue, alpha).setUv(u, v).setLight(light).setNormal(0.0F, 1.0F, 0.0F);
+    private void fluidVoidFading$vertex(VertexConsumer consumer, float x, float y, float z, float red, float green, float blue, float u, float v, int light, float alpha, float nx, float ny, float nz) {
+        consumer.addVertex(x, y, z).setColor(red, green, blue, alpha).setUv(u, v).setLight(light).setNormal(nx, ny, nz);
     }
 }
