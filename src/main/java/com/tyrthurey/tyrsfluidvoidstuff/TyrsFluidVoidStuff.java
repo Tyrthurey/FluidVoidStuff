@@ -1,11 +1,9 @@
 package com.tyrthurey.tyrsfluidvoidstuff;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.ResourceLocationException;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.api.distmarker.Dist;
@@ -13,53 +11,43 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
-import java.util.List;
-
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
-@Mod(value = TyrsFluidVoidStuff.MODID, dist = Dist.CLIENT)
+@Mod(TyrsFluidVoidStuff.MODID)
 public class TyrsFluidVoidStuff {
     public static final String MODID = "tyrsfluidvoidstuff";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final ModConfigSpec SPEC;
-    private static final ModConfigSpec.ConfigValue<List<? extends String>> TRANSPARENT_FLUIDS;
-
-    static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
-        TRANSPARENT_FLUIDS = builder.comment("If you notice a fluid not rendering transparent, try adding its identifier here")
-                .defineListAllowEmpty("additionalTransparentFluids", List.of("minecraft:flowing_lava"), () -> "", o -> {
-                    if (o instanceof String) {
-                        try {
-                            ResourceLocation.parse((String) o);
-                            return true;
-                        } catch (ResourceLocationException ignored) {
-                        }
-                    }
-                    return false;
-                });
-        SPEC = builder.build();
-    }
-
     public TyrsFluidVoidStuff(IEventBus bus, ModContainer container) {
-        container.registerConfig(ModConfig.Type.CLIENT, SPEC);
-        bus.addListener(TyrsFluidVoidStuff::clientStartup);
+        // Server (world-side) config: max fluid column length.
+        container.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            // Force every registered fluid onto the translucent render layer so
+            // the fade-into-void gradient actually blends (vanilla lava and many
+            // modded fluids default to the solid layer, where alpha < 1 either
+            // is ignored or becomes an ugly alpha-test cutout).
+            bus.addListener(TyrsFluidVoidStuff::clientStartup);
+
+            // Register NeoForge's built-in config screen so the "Config" button on
+            // the Mods screen opens an auto-generated UI for the SERVER config.
+            // Mirrors the NeoForge MDK template.
+            container.registerExtensionPoint(
+                    net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                    net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
+        }
     }
 
     public static void clientStartup(FMLClientSetupEvent event) {
-        for (String s : TRANSPARENT_FLUIDS.get()) {
-            ResourceLocation rl = ResourceLocation.parse(s);
-            // 1.21.1: BuiltInRegistries.FLUID.get(ResourceLocation) returns the value (no .getValue)
-            Fluid fluid = BuiltInRegistries.FLUID.get(rl);
-            if (fluid == Fluids.EMPTY) {
-                LOGGER.error("Fluid '{}' not found!", s);
-            } else {
-                // 1.21.1: ChunkSectionLayer does not exist; use RenderType.translucent()
-                ItemBlockRenderTypes.setRenderLayer(fluid, RenderType.translucent());
-            }
+        int forced = 0;
+        for (Fluid fluid : BuiltInRegistries.FLUID) {
+            if (fluid == Fluids.EMPTY) continue;
+            ItemBlockRenderTypes.setRenderLayer(fluid, RenderType.translucent());
+            forced++;
         }
+        LOGGER.info("[TyrsFluidVoidStuff] Forced translucent render layer on {} fluids.", forced);
     }
 }

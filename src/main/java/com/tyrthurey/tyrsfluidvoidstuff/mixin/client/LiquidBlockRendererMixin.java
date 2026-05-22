@@ -42,7 +42,7 @@ public abstract class LiquidBlockRendererMixin {
 
     @Inject(method = "tesselate", at = @At("HEAD"))
     public void fluidVoidFading$render(BlockAndTintGetter level, BlockPos pos, VertexConsumer consumer, BlockState blockState, FluidState fluidState, CallbackInfo ci) {
-        if (fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+        if (fluidVoidFading$shouldFadeBelow(level, pos, fluidState)) {
             fluidVoidFading$renderFluidInVoid(level, pos, consumer, fluidState);
         }
     }
@@ -50,6 +50,26 @@ public abstract class LiquidBlockRendererMixin {
     @Unique
     private static boolean fluidVoidFading$isDirectlyAboveVoid(BlockGetter level, BlockPos pos) {
         return pos.getY() == level.getMinBuildHeight();
+    }
+
+    /**
+     * Trigger for drawing the fade gradient below this fluid block. True when:
+     *  - the block is the last one above the void (vanilla behaviour), OR
+     *  - the block directly below is air AND this block holds a flowing (non-source)
+     *    fluid -- i.e. the bottom of a falling fluid column that ends in mid-air,
+     *    which is what happens when the server-side flow cap truncates a column.
+     */
+    @Unique
+    private static boolean fluidVoidFading$shouldFadeBelow(BlockGetter level, BlockPos pos, FluidState fluidState) {
+        if (fluidVoidFading$isDirectlyAboveVoid(level, pos)) {
+            return true;
+        }
+        if (fluidState == null || fluidState.isEmpty() || fluidState.isSource()) {
+            return false;
+        }
+        BlockPos below = pos.below();
+        BlockState belowState = level.getBlockState(below);
+        return belowState.isAir() && belowState.getFluidState().isEmpty();
     }
 
     @Inject(method = "isFaceOccludedByNeighbor", at = @At("HEAD"), cancellable = true)
@@ -220,12 +240,13 @@ public abstract class LiquidBlockRendererMixin {
         float bRed = brightnessUp * redF;
         float bGreen = brightnessUp * greenF;
         float bBlue = brightnessUp * blueF;
+        float capAlpha = alpha1 * 0.25F;
         // Wound so the visible (front) face points DOWN (-Y): viewer below sees it,
         // viewer above (inside the column) does not.
-        fluidVoidFading$vertexDown(consumer, d,        e, r,        bRed, bGreen, bBlue, bu1, bv1, light, alpha1);
-        fluidVoidFading$vertexDown(consumer, d + 1.0F, e, r,        bRed, bGreen, bBlue, bu2, bv1, light, alpha1);
-        fluidVoidFading$vertexDown(consumer, d + 1.0F, e, r + 1.0F, bRed, bGreen, bBlue, bu2, bv2, light, alpha1);
-        fluidVoidFading$vertexDown(consumer, d,        e, r + 1.0F, bRed, bGreen, bBlue, bu1, bv2, light, alpha1);
+        fluidVoidFading$vertexDown(consumer, d,        e, r,        bRed, bGreen, bBlue, bu1, bv1, light, capAlpha);
+        fluidVoidFading$vertexDown(consumer, d + 1.0F, e, r,        bRed, bGreen, bBlue, bu2, bv1, light, capAlpha);
+        fluidVoidFading$vertexDown(consumer, d + 1.0F, e, r + 1.0F, bRed, bGreen, bBlue, bu2, bv2, light, capAlpha);
+        fluidVoidFading$vertexDown(consumer, d,        e, r + 1.0F, bRed, bGreen, bBlue, bu1, bv2, light, capAlpha);
     }
 
     @Unique

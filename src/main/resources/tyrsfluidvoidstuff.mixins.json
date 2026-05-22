@@ -7,6 +7,9 @@
   "injectors": {
     "defaultRequire": 1
   },
+  "mixins": [
+    "FlowingFluidMixin"
+  ],
   "client": [
     "client.LiquidBlockRendererMixin",
     "client.SodiumDefaultFluidRendererMixin"

@@ -26,7 +26,12 @@ public final class Plugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("SodiumDefaultFluidRendererMixin")) {
             return sodiumLoaded;
         }
-        return !sodiumLoaded;
+        if (mixinClassName.contains("LiquidBlockRendererMixin")) {
+            // Vanilla fluid renderer is unused when Sodium is present.
+            return !sodiumLoaded;
+        }
+        // All other mixins (e.g. the server-side FlowingFluidMixin) are sodium-agnostic.
+        return true;
     }
 
     @Override

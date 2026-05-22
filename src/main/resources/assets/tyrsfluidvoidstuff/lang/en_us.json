@@ -1,1 +1,11 @@
-{}
+{
+  "tyrsfluidvoidstuff.configuration.title": "Tyr's Fluid Void Stuff",
+  "tyrsfluidvoidstuff.configuration.section.tyrsfluidvoidstuff.server.toml": "Server / World Settings",
+  "tyrsfluidvoidstuff.configuration.section.tyrsfluidvoidstuff.server.toml.title": "Server / World Settings",
+
+  "tyrsfluidvoidstuff.configuration.maxFluidColumnLength": "Max Fluid Column Length",
+  "tyrsfluidvoidstuff.configuration.maxFluidColumnLength.tooltip": "Maximum vertical drop (in blocks) that a fluid column may span below its source. 0 = vanilla (unlimited). N > 0 means a fluid can drop at most N blocks below its source Y; the column then ends with air underneath, and the renderer draws the fade-into-void gradient at the bottom.",
+
+  "tyrsfluidvoidstuff.configuration.fluidColumnLengthBlacklist": "Fluid Column Length Blacklist",
+  "tyrsfluidvoidstuff.configuration.fluidColumnLengthBlacklist.tooltip": "Fluids in this list are NOT affected by the custom column-length / orphaned-fall logic and behave 100% vanilla. List both source and flowing forms (e.g. \"minecraft:lava\", \"minecraft:flowing_lava\") for full opt-out."
+}

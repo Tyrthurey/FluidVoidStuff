@@ -68,7 +68,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
 
     @Inject(method = "render", at = @At("RETURN"))
     public void fluidVoidFading$render(LevelSlice level, BlockState blockState, FluidState fluidState, BlockPos blockPos, BlockPos offset, TranslucentGeometryCollector collector, ChunkModelBuilder meshBuilder, Material material, ColorProvider<FluidState> colorProvider, TextureAtlasSprite[] sprites, CallbackInfo ci) {
-        if (blockPos.getY() == ((BlockGetter) level).getMinBuildHeight()) {
+        if (fluidVoidFading$shouldFadeBelow(level, blockPos, fluidState)) {
             this.fluidVoidFading$renderFluidInVoid(level, fluidState, blockPos, offset, collector, meshBuilder, material, colorProvider, sprites);
         }
     }
@@ -78,6 +78,27 @@ public abstract class SodiumDefaultFluidRendererMixin {
         if (dir == Direction.DOWN && y == world.getMinBuildHeight()) {
             cir.setReturnValue(false);
         }
+    }
+
+    /**
+     * Trigger for drawing the fade gradient below this fluid block. True when:
+     *  - the block is the last one above the void (vanilla behaviour), OR
+     *  - the block directly below is air AND this block holds a flowing
+     *    (non-source) fluid -- i.e. the bottom of a falling fluid column that
+     *    ends in mid-air, which happens when the server-side flow cap
+     *    truncates a column.
+     */
+    @Unique
+    private static boolean fluidVoidFading$shouldFadeBelow(LevelSlice level, BlockPos pos, FluidState fluidState) {
+        BlockGetter bg = (BlockGetter) level;
+        if (pos.getY() == bg.getMinBuildHeight()) {
+            return true;
+        }
+        if (fluidState == null || fluidState.isEmpty() || fluidState.isSource()) {
+            return false;
+        }
+        BlockState belowState = bg.getBlockState(pos.below());
+        return belowState.isAir() && belowState.getFluidState().isEmpty();
     }
 
     @Unique
@@ -204,7 +225,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
                 ColorARGB.toABGR(this.quadColors[2]),
                 ColorARGB.toABGR(this.quadColors[3])
         };
-        this.fluidVoidFading$updateQuadWithAlpha(quad, downFacing, 0.5F, capColors, 1.0F, 1.0F);
+        this.fluidVoidFading$updateQuadWithAlpha(quad, downFacing, 0.5F, capColors, 0.25F, 0.25F);
         this.writeQuad(meshBuilder, collector, material, offset, quad, downFacing, false);
     }
 
