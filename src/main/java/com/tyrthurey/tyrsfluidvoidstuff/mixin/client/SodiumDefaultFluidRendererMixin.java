@@ -172,7 +172,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
             ModelQuadFacing facing = ModelQuadFacing.fromDirection(dir);
 
             lighter.calculate(quad, blockPos, this.quadLightData, null, dir, false, false);
-            colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors);
+            colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors, level.hasBiomeBlend());
 
             int[] original = new int[]{
                     ColorARGB.toABGR(this.quadColors[0]),
@@ -217,7 +217,7 @@ public abstract class SodiumDefaultFluidRendererMixin {
         ModelQuadFacing downFacing = ModelQuadFacing.fromDirection(Direction.DOWN);
         LightPipeline downLighter = this.lighters.getLighter(isWater && Minecraft.useAmbientOcclusion() ? LightMode.SMOOTH : LightMode.FLAT);
         downLighter.calculate(quad, blockPos, this.quadLightData, null, Direction.DOWN, false, false);
-        colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors);
+        colorProvider.getColors(level, blockPos, this.scratchPos, fluidState, quad, this.quadColors, level.hasBiomeBlend());
 
         int[] capColors = new int[]{
                 ColorARGB.toABGR(this.quadColors[0]),
