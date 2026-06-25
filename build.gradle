@@ -168,7 +168,30 @@ dependencies {
 
     // Sodium - used for compile-time access to Sodium internals so the SodiumDefaultFluidRendererMixin can compile.
     // Sodium is loaded at runtime only via the `clientWithSodium` run config.
-    sodium "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
+    sodium "maven.modrinth:sodium:mc1.21.1-0.8.12-beta.2-neoforge"
+}
+
+var extractSodiumNestedJar = tasks.register("extractSodiumNestedJar", Copy) {
+    from {
+        zipTree(configurations.sodium.singleFile)
+    }
+    include "META-INF/jarjar/*.jar"
+    into layout.buildDirectory.dir("sodiumNested")
+    eachFile {
+        path = name
+    }
+    includeEmptyDirs = false
+}
+
+dependencies {
+    compileOnly fileTree(layout.buildDirectory.dir("sodiumNested")) {
+        include "*.jar"
+        builtBy extractSodiumNestedJar
+    }
+}
+
+tasks.named("compileJava").configure {
+    dependsOn extractSodiumNestedJar
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
